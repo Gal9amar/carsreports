@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+.env.local
+.netlify/
+netlify/functions/node_modules/
+*.js.map
