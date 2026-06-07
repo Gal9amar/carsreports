@@ -5,7 +5,7 @@ interface Props {
   onLogin: (token: string, user: User) => void
 }
 
-type Step = 'choose' | 'email' | 'otp'
+type Step = 'choose' | 'email' | 'otp' | 'admin'
 
 export default function LoginPage({ onLogin }: Props) {
   const [step, setStep] = useState<Step>('choose')
@@ -41,12 +41,30 @@ export default function LoginPage({ onLogin }: Props) {
   }
 
   async function handleGoogle() {
-    // Google One Tap / Popup flow
     setError('כניסה עם Google תהיה זמינה בקרוב')
   }
 
   async function handleApple() {
     setError('כניסה עם Apple תהיה זמינה בקרוב')
+  }
+
+  async function handleAdminLogin() {
+    setError('')
+    setLoading(true)
+    try {
+      const res = await fetch('/api/auth-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: code }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      onLogin(data.token, data.user)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'שגיאה')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -78,6 +96,13 @@ export default function LoginPage({ onLogin }: Props) {
 
               <button className="btn btn-secondary" onClick={() => setStep('email')}>
                 📧 המשך עם אימייל
+              </button>
+
+              <button
+                onClick={() => { setCode(''); setError(''); setStep('admin') }}
+                style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', width: '100%', marginTop: 16, fontSize: 13 }}
+              >
+                🔐 כניסת מנהל
               </button>
 
               {error && <p className="error-msg text-center mt-2">{error}</p>}
@@ -137,6 +162,31 @@ export default function LoginPage({ onLogin }: Props) {
             </>
           )}
         </div>
+
+          {step === 'admin' && (
+            <>
+              <button onClick={() => setStep('choose')} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', marginBottom: 16, fontSize: 14 }}>
+                ← חזרה
+              </button>
+              <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 20 }}>כניסת מנהל</h2>
+              <div className="input-group">
+                <label>סיסמת מנהל</label>
+                <input
+                  className="input input-rtl"
+                  type="password"
+                  placeholder="הכנס סיסמה"
+                  value={code}
+                  onChange={e => setCode(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAdminLogin()}
+                  autoFocus
+                />
+              </div>
+              {error && <p className="error-msg">{error}</p>}
+              <button className="btn btn-primary mt-4" onClick={handleAdminLogin} disabled={loading || !code}>
+                {loading ? 'מתחבר...' : 'כניסה'}
+              </button>
+            </>
+          )}
 
         <p className="text-center text-muted" style={{ fontSize: 12, marginTop: 16 }}>
           בהמשך אתה מסכים לתנאי השימוש ומדיניות הפרטיות

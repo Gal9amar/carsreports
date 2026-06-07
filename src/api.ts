@@ -38,6 +38,14 @@ export const api = {
   // History
   getHistory: () => req<HistoryItem[]>('GET', '/history'),
 
+  // Market price
+  getMarketPrice: (manufacturer: string, model: string, year?: string) =>
+    req<MarketPrice>('GET', `/market-price?manufacturer=${encodeURIComponent(manufacturer)}&model=${encodeURIComponent(model)}${year ? `&year=${year}` : ''}`),
+
+  // Notes
+  getNote: (plate: string) => req<{ note: string }>('GET', `/notes?plate=${plate}`),
+  saveNote: (plate: string, note: string) => req('POST', `/notes?plate=${plate}`, { note }),
+
   // Packages
   getPackages: () => req<Package[]>('GET', '/packages'),
 
@@ -73,6 +81,11 @@ export interface VehicleData {
 export interface HistoryItem {
   plate: string
   searched_at: string
+}
+
+export interface MarketPrice {
+  prices: { avg: number; min: number; max: number; count: number } | null
+  total_on_road: number
 }
 
 export interface Package {
