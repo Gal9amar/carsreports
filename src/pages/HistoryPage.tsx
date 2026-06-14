@@ -24,7 +24,7 @@ export default function HistoryPage({ onSelect }: Props) {
         <button
           key={item.plate + item.searched_at}
           className="card"
-          style={{ width: '100%', text: 'right', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+          style={{ width: '100%', textAlign: 'right', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
           onClick={() => onSelect(item.plate)}
         >
           <span style={{ fontWeight: 700, fontSize: 18, letterSpacing: 2 }}>{item.plate}</span>

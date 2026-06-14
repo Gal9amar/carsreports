@@ -14,12 +14,17 @@ const TABLES = [
     provider TEXT NOT NULL DEFAULT 'email',
     searches_done INTEGER NOT NULL DEFAULT 0,
     searches_quota INTEGER NOT NULL DEFAULT 10,
+    searches_left INTEGER NOT NULL DEFAULT 10,
     quota_expires TEXT,
+    is_subscriber INTEGER NOT NULL DEFAULT 0,
+    subscription_expires TEXT,
+    is_admin INTEGER NOT NULL DEFAULT 0,
     referred_by TEXT,
     blocked INTEGER NOT NULL DEFAULT 0,
     first_seen TEXT NOT NULL DEFAULT (datetime('now')),
     last_seen TEXT NOT NULL DEFAULT (datetime('now')),
-    last_plate TEXT
+    last_plate TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`,
   `CREATE TABLE IF NOT EXISTS otp_codes (
     id TEXT PRIMARY KEY,
@@ -74,12 +79,24 @@ const TABLES = [
     active INTEGER NOT NULL DEFAULT 1
   )`,
   `CREATE TABLE IF NOT EXISTS pending_payments (
-    id TEXT PRIMARY KEY,
-    ref TEXT UNIQUE NOT NULL,
+    ref TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     searches INTEGER NOT NULL,
     price REAL NOT NULL,
     label TEXT NOT NULL,
+    paypal_order_id TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  )`,
+  `CREATE TABLE IF NOT EXISTS paypal_transactions (
+    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(8)))),
+    ref TEXT NOT NULL,
+    paypal_order_id TEXT,
+    user_id TEXT NOT NULL,
+    amount REAL NOT NULL,
+    label TEXT,
+    searches INTEGER,
+    status TEXT NOT NULL DEFAULT 'created',
+    updated_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   )`,
   `CREATE TABLE IF NOT EXISTS tickets (
@@ -139,6 +156,20 @@ const TABLES = [
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(user_id, plate)
   )`,
+  `CREATE TABLE IF NOT EXISTS bot_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL DEFAULT ''
+  )`,
+  `CREATE TABLE IF NOT EXISTS yad2_watches (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    make TEXT NOT NULL,
+    model TEXT NOT NULL DEFAULT '',
+    year INTEGER,
+    seen_ids TEXT DEFAULT '[]',
+    active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
 ]
 
 const SEEDS = [
@@ -156,6 +187,22 @@ const SEEDS = [
   `INSERT OR IGNORE INTO packages (id, label, searches, price) VALUES ('pkg_100', '🔍 100 חיפושים', 100, 20)`,
   `INSERT OR IGNORE INTO packages (id, label, searches, price) VALUES ('pkg_200', '🔍 200 חיפושים', 200, 30)`,
   `INSERT OR IGNORE INTO packages (id, label, searches, price) VALUES ('pkg_sub', '♾️ מנוי חודשי', -1, 25)`,
+  `INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('yad2_market_enabled', '1')`,
+  `INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('yad2_market_public', '0')`,
+  `INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('yad2_market_public_start', '')`,
+  `INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('yad2_market_public_end', '')`,
+  `INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('yad2_market_public_label', '')`,
+  `INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('yad2_watch_enabled', '1')`,
+  `INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('yad2_watch_max', '3')`,
+  `INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('yad2_watch_public', '0')`,
+  `INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('yad2_watch_public_start', '')`,
+  `INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('yad2_watch_public_end', '')`,
+  `INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('yad2_watch_public_label', '')`,
+  `INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('pdf_report_enabled', '1')`,
+  `INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('pdf_report_public', '0')`,
+  `INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('pdf_report_public_start', '')`,
+  `INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('pdf_report_public_end', '')`,
+  `INSERT OR IGNORE INTO bot_settings (key, value) VALUES ('pdf_report_public_label', '')`,
 ]
 
 export async function initDb() {

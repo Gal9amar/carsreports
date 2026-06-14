@@ -27,9 +27,34 @@ async function searchFilter(resourceId: string, filters: Record<string, unknown>
   try {
     const url = `${BASE}?resource_id=${resourceId}&filters=${encodeURIComponent(JSON.stringify(filters))}&limit=${limit}`
     const res = await fetch(url)
-    const json = await res.json() as { result?: { records?: Record<string, unknown>[] } }
+    const json = await res.json() as { result?: { records?: Record<string, unknown>[]; total?: number } }
     return json.result?.records ?? []
   } catch { return [] }
+}
+
+async function searchFilterTotal(resourceId: string, filters: Record<string, unknown>): Promise<number> {
+  try {
+    const url = `${BASE}?resource_id=${resourceId}&filters=${encodeURIComponent(JSON.stringify(filters))}&limit=1`
+    const res = await fetch(url)
+    const json = await res.json() as { result?: { total?: number } }
+    return json.result?.total ?? 0
+  } catch { return 0 }
+}
+
+async function searchFilterYearRange(resourceId: string, filters: Record<string, unknown>): Promise<{ total: number; minYear: number | null; maxYear: number | null }> {
+  try {
+    const base = `${BASE}?resource_id=${resourceId}&filters=${encodeURIComponent(JSON.stringify(filters))}&limit=1`
+    const [totalRes, minRes, maxRes] = await Promise.all([
+      fetch(base).then(r => r.json()) as Promise<{ result?: { total?: number } }>,
+      fetch(`${base}&sort=${encodeURIComponent('shnat_yitzur asc')}`).then(r => r.json()) as Promise<{ result?: { records?: Record<string, unknown>[] } }>,
+      fetch(`${base}&sort=${encodeURIComponent('shnat_yitzur desc')}`).then(r => r.json()) as Promise<{ result?: { records?: Record<string, unknown>[] } }>,
+    ])
+    return {
+      total: totalRes.result?.total ?? 0,
+      minYear: minRes.result?.records?.[0]?.shnat_yitzur ? Number(minRes.result.records[0].shnat_yitzur) : null,
+      maxYear: maxRes.result?.records?.[0]?.shnat_yitzur ? Number(maxRes.result.records[0].shnat_yitzur) : null,
+    }
+  } catch { return { total: 0, minYear: null, maxYear: null } }
 }
 
 async function fetchModelRecalls(record: Record<string, unknown>): Promise<Record<string, unknown>[]> {
@@ -104,6 +129,7 @@ export async function fetchVehicleData(plate: string): Promise<Record<string, un
     ownershipRecords, wltpRecords, recallCarRecords,
     tagNacheRecords, inactiveRecords, inactiveNodegRecords,
     importRecords, importerRecords, scrappedRecords,
+    degemYearTotal, degemAllYears,
   ] = await Promise.all([
     searchFilter(RES_OWNERSHIP, { mispar_rechev: mispar }, 50),
     fetchWltp(),
@@ -116,6 +142,10 @@ export async function fetchVehicleData(plate: string): Promise<Record<string, un
       ? searchFilter(RES_IMPORTER, { tozeret_cd: tozetCd, degem_cd: degemCd, shnat_yitzur: record.shnat_yitzur })
       : Promise.resolve([]),
     searchFilter(RES_SCRAPPED, { mispar_rechev: mispar }),
+    (degemCd && tozetCd && record.shnat_yitzur)
+      ? searchFilterTotal(RES_MAIN, { degem_cd: degemCd, tozeret_cd: tozetCd, shnat_yitzur: record.shnat_yitzur })
+      : Promise.resolve(0),
+    Promise.resolve({ total: 0, minYear: null, maxYear: null }),
   ])
 
   if (ownershipRecords.length) {
@@ -146,9 +176,15 @@ export async function fetchVehicleData(plate: string): Promise<Record<string, un
   record._inactive_no_degem = inactiveNodegRecords.length > 0
   record._was_rental        = inactiveRecords.length > 0
 
-  if (importRecords.length)   record._personal_import  = importRecords[0]
-  if (importerRecords.length) record._importer_price   = importerRecords[0].mehir
-  if (scrappedRecords.length) record._scrapped_dt      = scrappedRecords[0].bitul_dt || ''
+  if (importRecords.length)    record._personal_import  = importRecords[0]
+  if (importerRecords.length)  record._importer_price   = importerRecords[0].mehir
+  if (scrappedRecords.length)  record._scrapped_dt      = scrappedRecords[0].bitul_dt || ''
+  if (degemYearTotal > 0)      record._degem_total      = degemYearTotal
+  if (degemAllYears.total > 0) {
+    record._degem_total_all  = degemAllYears.total
+    record._degem_year_min   = degemAllYears.minYear
+    record._degem_year_max   = degemAllYears.maxYear
+  }
 
   return record
 }

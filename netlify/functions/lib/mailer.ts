@@ -8,6 +8,13 @@ const transporter = nodemailer.createTransport({
   },
 })
 
+export async function sendEmail(to: string, subject: string, html: string) {
+  await transporter.sendMail({
+    from: `"CarsReports" <${process.env.GMAIL_USER}>`,
+    to, subject, html,
+  })
+}
+
 export async function sendOtpEmail(to: string, code: string) {
   await transporter.sendMail({
     from: `"CarReports" <${process.env.GMAIL_USER}>`,

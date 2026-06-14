@@ -36,9 +36,10 @@ export async function createSession(userId: string) {
   const expires = new Date()
   expires.setDate(expires.getDate() + SESSION_DAYS)
 
+  const now = new Date().toISOString()
   await db.execute({
-    sql: 'INSERT INTO sessions (id, user_id, token, expires_at) VALUES (?, ?, ?, ?)',
-    args: [randomUUID(), userId, token, expires.toISOString()],
+    sql: 'INSERT INTO sessions (id, user_id, token, expires_at, created_at) VALUES (?, ?, ?, ?, ?)',
+    args: [randomUUID(), userId, token, expires.toISOString(), now],
   })
   return token
 }

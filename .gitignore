@@ -2,6 +2,7 @@ node_modules/
 dist/
 .env
 .env.local
+.env.production
 .netlify/
 netlify/functions/node_modules/
 *.js.map

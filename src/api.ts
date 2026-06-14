@@ -26,7 +26,7 @@ async function req<T>(method: string, path: string, body?: unknown): Promise<T> 
 export const api = {
   // Auth
   sendOtp: (email: string) => req('POST', '/auth-otp-send', { email }),
-  verifyOtp: (email: string, code: string) => req<{ token: string; user: User }>('POST', '/auth-otp-verify', { email, code }),
+  verifyOtp: (email: string, code: string, ref?: string) => req<{ token: string; user: User }>('POST', '/auth-otp-verify', { email, code, ref }),
   googleLogin: (id_token: string) => req<{ token: string; user: User }>('POST', '/auth-google', { id_token }),
 
   // User
@@ -50,8 +50,30 @@ export const api = {
   getPackages: () => req<Package[]>('GET', '/packages'),
 
   // Payment
-  initiatePayment: (package_id: string) => req<{ ref: string; paypal_url: string }>('POST', '/payment/initiate', { package_id }),
-  confirmPayment: (ref: string) => req('POST', '/payment/confirm', { ref }),
+  initiatePayment: (package_id: string, quantity?: number) =>
+    req<{ ref: string; approval_url: string; label: string; price: number; searches: number; manual?: boolean }>('POST', '/payment/initiate', { package_id, quantity }),
+  checkPaymentStatus: (ref: string) =>
+    req<{ status: string; completed: boolean }>('GET', `/payment/status?ref=${ref}`),
+  cancelPayment: (ref: string) => req('POST', '/payment/cancel', { ref }),
+
+  // Access codes
+  applyCode: (code: string) => req<{ ok: boolean; searches: number; unlimited: boolean; message: string }>('POST', '/apply-code', { code }),
+
+  // Referral
+  getReferralLink: () => req<{ link: string; referral_code: string }>('GET', '/referral/link'),
+  getReferralStats: () => req<{ total_referrals: number; total_bonus: number; referrals: ReferralItem[] }>('GET', '/referral/stats'),
+
+  // Watches
+  getWatches: () => req<WatchItem[]>('GET', '/watches'),
+  addWatch: (make: string, model?: string, year?: number) => req('POST', '/watches', { make, model, year }),
+  removeWatch: (id: number) => req('DELETE', `/watches/${id}`),
+  toggleWatch: (id: number) => req<{ active: boolean }>('PATCH', `/watches/${id}/toggle`),
+
+  // Tickets
+  getTickets: () => req<Ticket[]>('GET', '/tickets'),
+  createTicket: (subject: string, message: string) => req<{ id: string }>('POST', '/tickets', { subject, message }),
+  getTicket: (id: string) => req<TicketDetail>('GET', `/tickets/${id}`),
+  replyToTicket: (id: string, message: string) => req('POST', `/tickets/${id}/reply`, { message }),
 }
 
 export interface User {
@@ -65,6 +87,10 @@ export interface User {
   is_subscriber: boolean
   is_admin: boolean
   blocked: number
+  show_pdf_report: boolean
+  show_market_price: boolean
+  show_watches: boolean
+  pdf_public_label?: string
 }
 
 export interface VehicleData {
@@ -84,7 +110,7 @@ export interface HistoryItem {
 }
 
 export interface MarketPrice {
-  prices: { avg: number; min: number; max: number; count: number } | null
+  prices: { avg: number; min: number; max: number; count: number; median?: number; avg_km?: number | null } | null
   total_on_road: number
 }
 
@@ -93,4 +119,39 @@ export interface Package {
   label: string
   searches: number
   price: number
+}
+
+export interface Ticket {
+  id: string
+  subject: string
+  status: string
+  message: string
+  created_at: string
+}
+
+export interface TicketReply {
+  id: string
+  sender_name: string
+  is_admin: number
+  message: string
+  created_at: string
+}
+
+export interface TicketDetail extends Ticket {
+  replies: TicketReply[]
+}
+
+export interface WatchItem {
+  id: number
+  make: string
+  model: string
+  year: number | null
+  active: boolean
+  created_at: string
+}
+
+export interface ReferralItem {
+  referee_email: string
+  bonus: number
+  joined_at: string
 }

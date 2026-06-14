@@ -15,15 +15,13 @@ export const handler: Handler = async (event) => {
 
   const code = String(Math.floor(100000 + Math.random() * 900000))
   const expires = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+  const now = new Date().toISOString()
+
+  await db.execute({ sql: `DELETE FROM otp_codes WHERE email = ?`, args: [email] })
 
   await db.execute({
-    sql: `DELETE FROM otp_codes WHERE email = ?`,
-    args: [email],
-  })
-
-  await db.execute({
-    sql: `INSERT INTO otp_codes (id, email, code, expires_at) VALUES (?, ?, ?, ?)`,
-    args: [randomUUID(), email, code, expires],
+    sql: `INSERT INTO otp_codes (id, email, code, expires_at, created_at) VALUES (?, ?, ?, ?, ?)`,
+    args: [randomUUID(), email, code, expires, now],
   })
 
   await sendOtpEmail(email, code)

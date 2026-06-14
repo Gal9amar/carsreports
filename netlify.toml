@@ -1,10 +1,9 @@
 [build]
   command = "npm run build"
   publish = "dist"
-  functions = "netlify/functions"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "18"
 
 [[redirects]]
   from = "/api/*"
@@ -19,3 +18,15 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+
+[dev]
+  command = "npm run vite"
+  port = 8888
+  targetPort = 5173
+  framework = "#custom"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "unsafe-none"
+    Cross-Origin-Embedder-Policy = "unsafe-none"
